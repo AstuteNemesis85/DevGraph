@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const BASE_URL =
+  import.meta.env.PROD
+    ? 'https://devgraph-backend.onrender.com'
+    : 'http://localhost:8080';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -30,11 +35,14 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refresh_token');
-        const response = await axios.post('http://localhost:8080/auth/refresh', {
-          refresh_token: refreshToken,
-        });
+
+        const response = await axios.post(
+          `${BASE_URL}/auth/refresh`,
+          { refresh_token: refreshToken }
+        );
 
         const { access_token, refresh_token } = response.data;
+
         localStorage.setItem('access_token', access_token);
         localStorage.setItem('refresh_token', refresh_token);
 
