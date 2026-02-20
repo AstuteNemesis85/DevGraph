@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"devgraph/internal/analysis"
 	"devgraph/internal/auth"
@@ -87,5 +88,9 @@ func main() {
 	}
 
 	log.Println("Server running on :8080")
-	r.Run(":8080") // 🚀 ALWAYS LAST
+	port := os.Getenv("PORT")
+	if port == "" {
+    port = "8080"
+}
+r.Run(":" + port)
 }
