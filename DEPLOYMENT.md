@@ -101,16 +101,15 @@ git push -u origin main
    
    SERVER_PORT=8080
    
-   REDIS_HOST=<from-redis-internal-connection>
-   REDIS_PORT=6379
+   REDIS_URL=redis://red-d6bvgh9r8fns73ar9d20.internal:6379
    
    GIN_MODE=release
    ```
 
    **To get connection details:**
    - Click on your PostgreSQL database → "Info" tab → Copy "Internal Database URL"
-   - Click on your Redis instance → Copy "Internal Redis URL"
-   - Parse URLs to extract host, port, password
+   - Click on your Redis instance → "Info" tab → Copy "Internal Redis URL" (use the full URL)
+   - For JWT_SECRET, generate with: `openssl rand -base64 32`
 
 5. Click **"Create Web Service"**
 
