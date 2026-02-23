@@ -136,8 +136,15 @@ var (
 	rxBSMid  = regexp.MustCompile(`\bmid\s*=\s*[^;\n]*(?:lo|hi|low|high|left|right|l|r)\b`)
 	rxBSMove = regexp.MustCompile(`(?:lo|low|left|l)\s*=\s*mid[\s]*[+\-][\s]*1|(?:hi|high|right|r)\s*=\s*mid[\s]*[+\-][\s]*1`)
 
-	// Divide-and-conquer: recursive call that halves the input range
-	rxDnC = regexp.MustCompile(`(?:n|size|len|length|count|mid|hi|high|right)\s*/\s*2`)
+	// Divide-and-conquer: recursive call that halves the input range.
+	// Two complementary signals:
+	//   rxDnC       — named variable or parenthesised expression divided by 2
+	//                 covers: n/2, size/2, (r-l)/2, (hi-lo)/2, etc.
+	//   rxDnCMidArg — 'mid' appearing inside a function call's argument list,
+	//                 matched 2+ times = the classic merge-sort split pattern
+	//                 (func(arr, l, mid) and func(arr, mid+1, r)).
+	rxDnC       = regexp.MustCompile(`(?:(?:n|size|len|length|count|mid|hi|high|right|r|end)\s*/\s*2|\([^)]{1,60}\)\s*/\s*2)`)
+	rxDnCMidArg = regexp.MustCompile(`\w+\s*\([^)]*\bmid\b`)
 
 	// Graph traversal markers
 	rxVisited = regexp.MustCompile(`\bvisited\b`)
@@ -434,11 +441,24 @@ func detectBinarySearch(clean string) bool {
 	return rxBSMid.MatchString(clean) && rxBSMove.MatchString(clean)
 }
 
-// detectDivideConquer identifies divide-and-conquer by requiring BOTH:
-//   • Recursion (a function calls itself).
-//   • An explicit halving of the problem size (n/2, size/2, etc.).
+// detectDivideConquer identifies divide-and-conquer by requiring recursion PLUS
+// at least one of two halving signals:
+//   1. An arithmetic halving expression  (n/2, (r-l)/2, size/2, …).
+//   2. 'mid' used as an argument in 2+ call sites — the canonical merge-sort /
+//      segment-tree split pattern:  solve(arr, l, mid)  +  solve(arr, mid+1, r).
 func detectDivideConquer(clean string, hasRecursion bool) bool {
-	return hasRecursion && rxDnC.MatchString(clean)
+	if !hasRecursion {
+		return false
+	}
+	if rxDnC.MatchString(clean) {
+		return true
+	}
+	// Two or more call sites that include 'mid' as an argument strongly indicate
+	// a divide-and-conquer split even when the halving expression is implicit.
+	if len(rxDnCMidArg.FindAllString(clean, -1)) >= 2 {
+		return true
+	}
+	return false
 }
 
 // detectDFSBFS identifies graph traversal by requiring:
