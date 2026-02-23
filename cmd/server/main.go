@@ -26,7 +26,7 @@ func main() {
 		log.Fatal("Database connection failed:", err)
 	}
 
-	// Auto-migrate schemas
+	// Auto-migrate schemas — user.User must come first so new columns are added
 	err = db.AutoMigrate(
 		&user.User{},
 		&auth.Session{},
@@ -74,13 +74,9 @@ func main() {
 	protected := r.Group("/api")
 	protected.Use(auth.JWTAuthMiddleware())
 	{
-		protected.GET("/me", func(c *gin.Context) {
-			userID, _ := c.Get("user_id")
-			c.JSON(200, gin.H{
-				"user_id": userID,
-				"message": "you are authenticated",
-			})
-		})
+		protected.GET("/me", user.GetProfile(db))
+		protected.GET("/profile", user.GetProfile(db))
+		protected.PUT("/profile", user.UpdateProfile(db))
 		protected.POST("/submit", code.SubmitCode(db))
 		protected.GET("/submissions", analysis.GetUserSubmissions(db))
 		protected.GET("/analysis/:id", analysis.GetAnalysis(db))

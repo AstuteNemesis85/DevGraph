@@ -11,5 +11,7 @@ type User struct {
 	Username     string    `gorm:"unique;not null"`
 	Email        string    `gorm:"unique;not null"`
 	PasswordHash string    `gorm:"not null"`
+	AvatarURL    string    `gorm:"default:''"` 
+	Bio          string    `gorm:"default:''"` 
 	CreatedAt    time.Time
 }

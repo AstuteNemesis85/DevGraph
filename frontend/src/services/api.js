@@ -67,6 +67,11 @@ export const authAPI = {
   getMe: () => api.get('/api/me'),
 };
 
+export const profileAPI = {
+  getProfile: () => api.get('/api/profile'),
+  updateProfile: (data) => api.put('/api/profile', data),
+};
+
 export const codeAPI = {
   submit: (data) => api.post('/api/submit', data),
   getSubmissions: () => api.get('/api/submissions'),

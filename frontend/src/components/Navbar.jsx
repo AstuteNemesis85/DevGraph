@@ -34,7 +34,7 @@ export default function Navbar() {
               <Code2 className="w-4 h-4" />
               <span className="font-medium">Dashboard</span>
             </Link>
-            
+
             <Link
               to="/recommendations"
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600/20 to-cyan-600/20 hover:from-purple-600/30 hover:to-cyan-600/30 text-purple-300 hover:text-purple-200 transition-all duration-200 border border-purple-500/30 hover:border-purple-400/50"
@@ -45,15 +45,31 @@ export default function Navbar() {
 
             {/* User Menu */}
             <div className="flex items-center gap-3 pl-3 border-l border-gray-700">
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-800/50 rounded-lg border border-gray-700/50">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                  <User className="w-4 h-4 text-white" />
+              {/* Clicking the user chip goes to /profile */}
+              <Link
+                to="/profile"
+                className="flex items-center gap-2 px-3 py-2 bg-gray-800/50 hover:bg-gray-700/50 rounded-lg border border-gray-700/50 hover:border-purple-500/50 transition-all duration-200 group"
+              >
+                {/* Avatar: real image if set, gradient fallback otherwise */}
+                <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-purple-500/30 group-hover:ring-purple-400/60 transition-all">
+                  {user?.avatar_url ? (
+                    <img
+                      src={user.avatar_url}
+                      alt={user.username}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                  )}
                 </div>
-                <span className="text-sm text-gray-300 font-medium">
+                <span className="text-sm text-gray-300 font-medium group-hover:text-white transition-colors">
                   {user?.username || 'User'}
                 </span>
-              </div>
-              
+              </Link>
+
               <button
                 onClick={handleLogout}
                 className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all duration-200 border border-red-500/30 hover:border-red-400/50"
