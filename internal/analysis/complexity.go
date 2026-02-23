@@ -34,6 +34,10 @@ func inferComplexity(code string) (timeComplexity, spaceComplexity string) {
 func classifyTime(f codeFeatures) string {
 	switch {
 
+	// ── O(n^3): triple (or deeper) structural nesting ────────────────────
+	case f.maxLoopDepth >= 3 && !f.hasDivideConquer && !f.hasBinarySearch:
+		return "O(n^3)"
+
 	// ── O(n^2): 2-D DP table (nested loops + dp[i][j]) ───────────────────
 	case f.hasDPTable && f.maxLoopDepth >= 2:
 		return "O(n^2)"

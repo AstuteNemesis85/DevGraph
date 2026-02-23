@@ -24,7 +24,6 @@ package analysis
 import (
 	"regexp"
 	"strings"
-	"unicode"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -125,9 +124,9 @@ var (
 	rxQueueDS = rxList(`\bqueue\s*<`, `\bdeque\s*<`, `\bQueue\b`, `ArrayDeque\b`)
 
 	// Algorithm markers
-	rxSort      = rxList(`\bsort\s*\(`, `\.sort\s*\(`, `Collections\.sort\b`, `Arrays\.sort\b`)
-	rxHashSet   = rxList(`\bunordered_set\s*<`, `\bset\s*<`, `\bHashSet\b`)
-	rxEarlyBreak = rxList(`\bbreak\b`, `\breturn\b`) // presence of break is the signal
+	rxSort       = rxList(`\bsort\s*\(`, `\.sort\s*\(`, `Collections\.sort\b`, `Arrays\.sort\b`)
+	rxHashSet    = rxList(`\bunordered_set\s*<`, `\bset\s*<`, `\bHashSet\b`)
+	rxEarlyBreak = rxList(`\bbreak\b`, `\bcontinue\b`) // only genuine early-exits, not normal return
 
 	// Function declarations — C++ / Java / Go / Python
 	// Captures the function name as group 1.
@@ -316,6 +315,12 @@ func isLangKeyword(s string) bool {
 // scope stack. Each entry on the stack records whether the corresponding
 // open-brace was introduced by a loop keyword (for / while / do).
 //
+// Critical design: loop headers contain '(...)' between the keyword and '{',
+// so we cannot use a simple "previous word" approach.  Instead we use a
+// pendingLoop boolean that is SET when a loop keyword is seen and CONSUMED
+// on the next '{'.  A parenDepth counter prevents the ';' inside a for-init
+// clause (for(i=0; i<n; i++)) from prematurely clearing the pending flag.
+//
 // Returns:
 //   maxDepth   — the highest simultaneous loop-nesting level reached
 //   numBlocks  — total number of loop-opening braces (≥2 with maxDepth==1
@@ -323,26 +328,26 @@ func isLangKeyword(s string) bool {
 func analyzeLoopStructure(clean string) (maxDepth, numBlocks int) {
 	type frame struct{ isLoop bool }
 
-	stack     := make([]frame, 0, 32)
-	loopDepth := 0
-	prevWord  := ""
-	i, n      := 0, len(clean)
+	stack       := make([]frame, 0, 32)
+	loopDepth   := 0
+	pendingLoop := false
+	parenDepth  := 0
+	i, n        := 0, len(clean)
 
 	for i < n {
 		ch := clean[i]
 
 		switch {
 		case ch == '{':
-			_, isLoop := loopKeywords[prevWord]
-			stack = append(stack, frame{isLoop: isLoop})
-			if isLoop {
+			stack = append(stack, frame{isLoop: pendingLoop})
+			if pendingLoop {
 				loopDepth++
 				numBlocks++
 				if loopDepth > maxDepth {
 					maxDepth = loopDepth
 				}
 			}
-			prevWord = ""
+			pendingLoop = false // consumed
 			i++
 
 		case ch == '}':
@@ -352,7 +357,25 @@ func analyzeLoopStructure(clean string) (maxDepth, numBlocks int) {
 				}
 				stack = stack[:len(stack)-1]
 			}
-			prevWord = ""
+			i++
+
+		case ch == '(':
+			parenDepth++
+			i++
+
+		case ch == ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+			i++
+
+		// A semicolon outside of parentheses means we're past any loop header
+		// (handles do { } while(...); — the trailing semicolon clears the
+		// pending flag that 'while' would have re-set after the do-body).
+		case ch == ';':
+			if parenDepth == 0 {
+				pendingLoop = false
+			}
 			i++
 
 		case isIdentStart(ch):
@@ -360,16 +383,13 @@ func analyzeLoopStructure(clean string) (maxDepth, numBlocks int) {
 			for j < n && isIdentContinue(clean[j]) {
 				j++
 			}
-			prevWord = clean[i:j]
+			word := clean[i:j]
+			if _, ok := loopKeywords[word]; ok {
+				pendingLoop = true
+			}
 			i = j
 
 		default:
-			// Any non-identifier, non-brace character resets the "previous word"
-			// only when it's not whitespace — whitespace is allowed between a loop
-			// keyword and its opening brace (e.g.  "for (...)\n{").
-			if !unicode.IsSpace(rune(ch)) {
-				prevWord = ""
-			}
 			i++
 		}
 	}
