@@ -51,8 +51,10 @@ func classifyTime(f codeFeatures) string {
 	case f.hasDivideConquer:
 		return "O(n log n)"
 
-	// ── O(n log n): linear scan containing a binary search ───────────────
-	case f.hasBinarySearch && f.maxLoopDepth >= 1:
+	// ── O(n log n): outer loop wrapping a binary search ────────────────────
+	//   maxLoopDepth>=2 means there is at least one loop OUTSIDE the binary
+	//   search loop itself (e.g. iterating candidates and binary-searching each).
+	case f.hasBinarySearch && f.maxLoopDepth >= 2:
 		return "O(n log n)"
 
 	// ── O(2^n): bare (unmemoised) recursion — exponential growth ─────────
@@ -83,7 +85,12 @@ func classifyTime(f codeFeatures) string {
 	case f.maxLoopDepth == 1 || f.hasDFSBFS:
 		return "O(n)"
 
-	// ── O(1): no loops, no recursion, no traversal ───────────────────────
+	// ── O(n log n): standalone sort call with no surrounding loops ────────
+	//   std::sort / Collections.sort are O(n log n) by definition.
+	case f.hasSorting:
+		return "O(n log n)"
+
+	// ── O(1): no loops, no recursion, no traversal, no sort ──────────────
 	default:
 		return "O(1)"
 	}
@@ -120,6 +127,18 @@ func classifySpace(f codeFeatures) string {
 	// ── O(n): linear recursion stack (e.g. DFS on a path-shaped graph) ───
 	case f.hasRecursion:
 		return "O(n)"
+
+	// ── O(1): binary search with a vector/array *parameter* — no new heap
+	//   allocation is made inside the function; the vector is passed by
+	//   reference.  Only applies when no other allocating structures are used.
+	case f.hasBinarySearch && f.usesVector && !f.usesMap && !f.uses2DArray && !f.usesStack && !f.usesQueue && !f.hasRecursion:
+		return "O(1)"
+
+	// ── O(log n): sort-only function with a vector parameter ─────────────
+	//   std::sort (introsort) uses O(log n) stack space internally.
+	//   The vector is a reference parameter, not a new allocation.
+	case f.hasSorting && f.usesVector && !f.usesMap && !f.uses2DArray && !f.usesStack && !f.usesQueue && !f.hasRecursion:
+		return "O(log n)"
 
 	// ── O(n): heap-allocated linear structures ────────────────────────────
 	case f.usesMap || f.usesVector || f.usesStack || f.usesQueue:
